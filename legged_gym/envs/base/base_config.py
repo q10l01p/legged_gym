@@ -1,55 +1,40 @@
-# SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: BSD-3-Clause
-# 
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright notice, this
-# list of conditions and the following disclaimer.
-#
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
-#
-# 3. Neither the name of the copyright holder nor the names of its
-# contributors may be used to endorse or promote products derived from
-# this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
-# Copyright (c) 2021 ETH Zurich, Nikita Rudin
-
 import inspect
 
 class BaseConfig:
+    """
+    基础配置类，用于递归地初始化所有成员类
+
+    注解:
+    - 该类包含一个构造函数和一个静态方法，用于初始化所有成员类。
+    - 忽略所有以'__'开头的名称（内置方法）。
+    """
+
     def __init__(self) -> None:
-        """ Initializes all member classes recursively. Ignores all namse starting with '__' (buit-in methods)."""
-        self.init_member_classes(self)
+        """
+        类的构造函数，用于初始化所有成员类
+
+        注解:
+        - 调用init_member_classes方法来递归初始化成员类。
+        """
+        self.init_member_classes(self)  # 初始化成员类的实例
     
     @staticmethod
     def init_member_classes(obj):
-        # iterate over all attributes names
-        for key in dir(obj):
-            # disregard builtin attributes
-            # if key.startswith("__"):
-            if key=="__class__":
+        """
+        静态方法，用于初始化对象的成员类
+
+        参数:
+        - obj: 需要初始化成员类的对象
+
+        注解:
+        - 遍历对象的所有属性名，忽略以'__class__'为名的内置属性。
+        - 对于每个属性，检查是否为类，如果是，则实例化该类，并递归初始化其成员。
+        """
+        for key in dir(obj):                            # 遍历对象的所有属性名
+            if key == "__class__":                      # 忽略'__class__'内置属性
                 continue
-            # get the corresponding attribute object
-            var =  getattr(obj, key)
-            # check if it the attribute is a class
-            if inspect.isclass(var):
-                # instantate the class
-                i_var = var()
-                # set the attribute to the instance instead of the type
-                setattr(obj, key, i_var)
-                # recursively init members of the attribute
-                BaseConfig.init_member_classes(i_var)
+            var = getattr(obj, key)                     # 获取对应的属性对象
+            if inspect.isclass(var):                    # 检查属性是否为类
+                i_var = var()                           # 实例化该类
+                setattr(obj, key, i_var)                # 将属性设置为该实例
+                BaseConfig.init_member_classes(i_var)   # 递归初始化该实例的成员类
