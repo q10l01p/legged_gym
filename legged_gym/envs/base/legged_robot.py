@@ -103,9 +103,6 @@ class LeggedRobot(BaseTask):
         return self.obs_buf, self.privileged_obs_buf, self.rew_buf, self.reset_buf, self.extras
 
     def post_physics_step(self):
-        """ check terminations, compute observations and rewards
-            calls self._post_physics_step_callback() for common computations 
-            calls self._draw_debug_vis() if needed
         """
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_net_contact_force_tensor(self.sim)
@@ -136,7 +133,6 @@ class LeggedRobot(BaseTask):
             self._draw_debug_vis()
 
     def check_termination(self):
-        """ Check if environments need to be reset
         """
         self.reset_buf = torch.any(torch.norm(self.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1., dim=1)
         self.time_out_buf = self.episode_length_buf > self.max_episode_length # no terminal reward for time-outs
@@ -244,13 +240,11 @@ class LeggedRobot(BaseTask):
         self._create_envs()
 
     def set_camera(self, position, lookat):
-        """ Set camera position and direction
         """
         cam_pos = gymapi.Vec3(position[0], position[1], position[2])
         cam_target = gymapi.Vec3(lookat[0], lookat[1], lookat[2])
         self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
 
-    #------------- Callbacks --------------
     def _process_rigid_shape_props(self, props, env_id):
         """ Callback allowing to store/change/randomize the rigid shape properties of each environment.
             Called During environment creation.
@@ -351,16 +345,6 @@ class LeggedRobot(BaseTask):
         self.commands[env_ids, :2] *= (torch.norm(self.commands[env_ids, :2], dim=1) > 0.2).unsqueeze(1)
 
     def _compute_torques(self, actions):
-        """ Compute torques from actions.
-            Actions can be interpreted as position or velocity targets given to a PD controller, or directly as scaled torques.
-            [NOTE]: torques must have the same dimension as the number of DOFs, even if some DOFs are not actuated.
-
-        Args:
-            actions (torch.Tensor): Actions
-
-        Returns:
-            [torch.Tensor]: Torques sent to the simulation
-        """
         #pd controller
         actions_scaled = actions * self.cfg.control.action_scale
         control_type = self.cfg.control.control_type
@@ -390,11 +374,6 @@ class LeggedRobot(BaseTask):
                                               gymtorch.unwrap_tensor(self.dof_state),
                                               gymtorch.unwrap_tensor(env_ids_int32), len(env_ids_int32))
     def _reset_root_states(self, env_ids):
-        """ Resets ROOT states position and velocities of selected environmments
-            Sets base position based on the curriculum
-            Selects randomized base velocities within -0.5:0.5 [m/s, rad/s]
-        Args:
-            env_ids (List[int]): Environemnt ids
         """
         # base position
         if self.custom_origins:
@@ -412,7 +391,6 @@ class LeggedRobot(BaseTask):
                                                      gymtorch.unwrap_tensor(env_ids_int32), len(env_ids_int32))
 
     def _push_robots(self):
-        """ Random pushes the robots. Emulates an impulse by setting a randomized base velocity. 
         """
         max_vel = self.cfg.domain_rand.max_push_vel_xy
         self.root_states[:, 7:9] = torch_rand_float(-max_vel, max_vel, (self.num_envs, 2), device=self.device) # lin vel x/y
@@ -477,10 +455,7 @@ class LeggedRobot(BaseTask):
             noise_vec[48:235] = noise_scales.height_measurements* noise_level * self.obs_scales.height_measurements
         return noise_vec
 
-    #----------------------------------------
     def _init_buffers(self):
-        """ Initialize torch tensors which will contain simulation states and processed quantities
-        """
         # get gym GPU state tensors
         actor_root_state = self.gym.acquire_actor_root_state_tensor(self.sim)
         dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
@@ -567,7 +542,6 @@ class LeggedRobot(BaseTask):
                              for name in self.reward_scales.keys()}
 
     def _create_ground_plane(self):
-        """ Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
         """
         plane_params = gymapi.PlaneParams()
         plane_params.normal = gymapi.Vec3(0.0, 0.0, 1.0)
